@@ -7,6 +7,9 @@ export function convertKana(text: string): string {
   function createRegex(prefix: string) {
     return new RegExp(`${prefix}(?=${endSymbols}|$)`, "gu")
   }
+  const shijifu1Regex = new RegExp(`⠐⠤(.*?)⠤⠂`, "gu")
+  const shijifu2Regex = new RegExp(`⠐⠤⠤(.*?)⠤⠤⠂`, "gu")
+  const shijifu3Regex = new RegExp(`⠰⠤⠤(.*?)⠤⠤⠆`, "gu")
 
   const convertedSymbols = text
     .replace(/\u2800\u2800⠔⠔\u2800/g, '\u2800\u2800☆\u2800')
@@ -17,18 +20,14 @@ export function convertKana(text: string): string {
     .replace(/⠒⠒⠕/g, '→')
     .replace(/⠪⠒⠒/g, '←')
     .replace(/⠂⠂⠂/g, '……')
-    .replace(/⠰⠤⠤/g, '【')
-    .replace(/⠤⠤⠆/g, '】')
-    .replace(/⠐⠤⠤/g, '“')
-    .replace(/⠤⠤⠂/g, '”')
-    .replace(/⠐⠤/g, '‘')
-    .replace(/⠤⠂/g, '’')
+    .replace(shijifu3Regex, '【$1】')
+    .replace(shijifu2Regex, '“$1”')
+    .replace(shijifu1Regex, '‘$1’')
     .replace(/⠰⠄/g, '＜')
     .replace(/⠠⠆/g, '＞')
     .replace(/⠰⠤/g, '『')
     .replace(/⠤⠆/g, '』')
-    .replace(/⠐⠶/g, '｛')
-    .replace(/⠶⠂/g, '｝')
+    .replace(/⠐⠶(.*?)⠶⠂/gu, '｛$1｝')
     .replace(/⠰⠶/g, '((')
     .replace(/⠶⠆/g, '))')
     .replace(/⠠⠄/g, '=')
