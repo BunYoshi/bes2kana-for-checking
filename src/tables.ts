@@ -108,6 +108,7 @@ export const youon26Table: Record<string, string> = {
     'こ': 'くぉ',
     'た': 'つぁ',
     'ち': 'つぃ',
+    'つ': 'とぅ',
     'て': 'つぇ',
     'と': 'つぉ',
     'は': 'ふぁ',

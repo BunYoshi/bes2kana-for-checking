@@ -93,11 +93,11 @@ export class GyoUtusiNavigator {
 
     // 「移」の位置をすべて洗い出す
     const matches: number[] = [];
-    const regex = /移/g;
+    const regex = /行移し/g;
     let match: RegExpExecArray | null;
     while ((match = regex.exec(fullText)) !== null) {
       const idx = match.index;
-      if (idx > 0 && idx < fullText.length - 1) {
+      if (idx > 0 && idx < fullText.length - 3) {
         matches.push(idx);
       }
     }
@@ -107,9 +107,9 @@ export class GyoUtusiNavigator {
     // ★ ご指摘の通り「後ろから前へ向けて（降順）」処理する
     matches.reverse().forEach((idx) => {
       // 削除対象の「移」とその前後の文字を含むRangeを作成
-      // idx - 1 (前1文字) から idx + 2 (後1文字の次) まで
+      // idx - 1 (前1文字) から idx + 4 (後1文字の次) まで
       const startPos = this.resolvePosition(idx - 1, nodeMaps);
-      const endPos = this.resolvePosition(idx + 2, nodeMaps);
+      const endPos = this.resolvePosition(idx + 4, nodeMaps);
 
       if (startPos && endPos) {
         const range = document.createRange();
@@ -117,11 +117,11 @@ export class GyoUtusiNavigator {
           range.setStart(startPos.node, startPos.offset);
           range.setEnd(endPos.node, endPos.offset);
 
-          // 取得できるテキストは「前文字 + 移 + 後文字」になっている
-          const matchedText = range.toString(); // 例: "う移え"
-          if (matchedText.length === 3 && matchedText[1] === '移') {
-            // 「移」を抜いた結合文字を作る（例: "うえ"）
-            const combinedText = matchedText[0] + matchedText[2];
+          // 取得できるテキストは「前文字 + 行移し + 後文字」になっている（全5文字）
+          const matchedText = range.toString(); // 例: "う行移しえ"
+          if (matchedText.length === 5 && matchedText.slice(1, 4) === '行移し') {
+            // 「行移し」を抜いた前後をつなぐ（例: "うえ"）
+            const combinedText = matchedText[0] + matchedText[4];
 
             // 新しい span タグを作成
             const span = document.createElement('span');

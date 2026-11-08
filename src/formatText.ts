@@ -186,7 +186,7 @@ export function formatText(unicode: string, mode: OutputMode): string {
     let line = lines[i]
 
     // ページ１行目（ページ番号行）はスキップ
-    if (line.includes('@PB@')) {
+    if (line.includes('@PB@') || line.includes('@HR@')) {
       continue
     }
 
@@ -247,10 +247,15 @@ export function formatText(unicode: string, mode: OutputMode): string {
 
     // 結合条件1: 次の行の行頭に \u2800 がない場合（改行削除してそのまま連結）
     if (spaceCount === 0) {
-      if (/\u2800$/.test(prevLine)) {
-        result[result.length - 1] = prevLine + line
+      let baseLine = prevLine
+      if (prevLine.length === 0) {
+        result.pop()
+        baseLine = result[result.length - 1]
+      }
+      if (/\u2800$/.test(baseLine)) {
+        result[result.length - 1] = baseLine + line
       } else {
-        result[result.length - 1] = prevLine + '移' + line
+        result[result.length - 1] = baseLine + '行移し' + line
       }
       indentDiff = undefined
       continue

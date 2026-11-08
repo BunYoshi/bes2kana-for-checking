@@ -92,6 +92,7 @@ export function convertKana(text: string): string {
         const str = Tables.youon26Table[baseChar] ?? match
         return str
           .replace(/く/, 'ぐ')
+          .replace(/と/, 'ど')
           .replace(/ふ/, 'ゔ')
       default:
         return match
