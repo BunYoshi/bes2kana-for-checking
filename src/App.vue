@@ -65,6 +65,10 @@ const onFileClose = () => {
   str.value = ''
   openFile.value = false
   if (fileInput.value) fileInput.value.value = ''
+
+  // ★ 追加：ファイルを閉じたらナビゲーターのインスタンスを破棄（リセット）する
+  underscoreNavigator = null
+  gyoUtusiNavigator = null
 }
 
 const onGetBesUrl = async (url: string) => {
@@ -93,18 +97,6 @@ onMounted(() => {
 // ★ 追加：テキスト（str）が更新されたりファイルが閉じられたタイミングで自動制御
 watch(str, async (newVal) => {
   await nextTick() // DOMの描画完了を確実に待つ
-  // if (newVal) {
-  //   if (!gyoUtusiNavigator && brailleRef.value) {
-  //     // まだインスタンスがなければ、Braille要素をターゲットにして生成
-  //     gyoUtusiNavigator = new GyoUtusiNavigator(brailleRef.value)
-  //   } else {
-  //     // すでに生成されていれば再スキャン（リフレッシュ）
-  //     gyoUtusiNavigator?.refresh()
-  //   }
-  // } else {
-  //   // ファイルを閉じてテキストが空になったときもリフレッシュしてハイライトをクリア
-  //   gyoUtusiNavigator?.refresh()
-  // }
 
   if (newVal && brailleRef.value) {
     // 1. UnderscoreNavigator の初期化 または リフレッシュ
@@ -114,7 +106,7 @@ watch(str, async (newVal) => {
       underscoreNavigator.refresh()
     }
 
-    // 2. GyoUtusiNavigator の初期化（underscoreNavigator を引数として渡す！） または リフレッシュ
+    // 2. GyoUtusiNavigator の初期化 または リフレッシュ
     if (!gyoUtusiNavigator) {
       gyoUtusiNavigator = new GyoUtusiNavigator(brailleRef.value, underscoreNavigator)
     } else {
