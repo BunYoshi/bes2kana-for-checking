@@ -264,7 +264,7 @@ export class UnderscoreNavigator {
     while ((match = regex.exec(fullText)) !== null) {
       const start = match.index;
       const end = match.index + match[0].length - 1;
-      if (start < startIndex) {
+      if (end < startIndex) {
         lastValid = { start, end };
       } else {
         break;
@@ -298,21 +298,76 @@ export class UnderscoreNavigator {
     }
   }
 
+  // private movePrevPair(type: '_' | '│') {
+  //   const currentRange = type === '_' ? this.underscoreRange : this.boxRange;
+  //   const { fullText } = this.buildTextContext();
+
+  //   if (!currentRange) return;
+  //   const prevPair = this.findPrevPairInText(fullText, currentRange.start, type);
+
+  //   if (prevPair) {
+  //     if (type === '_') this.underscoreRange = prevPair;
+  //     else this.boxRange = prevPair;
+  //     this.updateHighlights();
+  //     this.scrollToCurrent(type, 'start');
+  //   }
+  // }
+  
   private movePrevPair(type: '_' | '│') {
     const currentRange = type === '_' ? this.underscoreRange : this.boxRange;
+    if (!currentRange) return;
+
     const { fullText } = this.buildTextContext();
 
-    if (!currentRange) return;
-    const prevPair = this.findPrevPairInText(fullText, currentRange.start, type);
-
-    if (prevPair) {
-      if (type === '_') this.underscoreRange = prevPair;
-      else this.boxRange = prevPair;
-      this.updateHighlights();
-      this.scrollToCurrent(type, 'start');
+    if (type === '_') {
+      let markerStart, markerEnd
+      for (let i = currentRange.start - 1; i >= 0; i--) {
+        if (fullText[i] === '_') {
+          markerEnd = i
+          break;
+        }
+      }
+      if (markerEnd) {
+        for (let i = markerEnd - 1; i >= 0; i--) {
+          if (fullText[i] === '_') {
+            markerStart = i
+            break;
+          }
+        }
+      }
+      if(markerStart && markerEnd) {
+        const newRange = { start: markerStart, end: markerEnd };
+        this.underscoreRange = newRange;
+        this.updateHighlights();
+        this.scrollToCurrent(type, 'start');
+      }
+    } else {
+      let markerStart, markerEnd
+      for (let i = currentRange.start - 1; i >= 0; i--) {
+        if (fullText[i] === '│') {
+          markerEnd = i
+        }
+      }
+      if (markerEnd) {
+        for (let i = markerEnd - 1; i >= 0; i--) {
+          if (fullText[i - 1] !== '│') {
+            markerStart = i
+          } else {
+            markerStart = i - 1
+          }
+          break;
+        }
+      }
+      if (markerStart && markerEnd) {
+        const newRange = { start: markerStart, end: markerEnd };
+        this.boxRange = newRange;
+        this.updateHighlights();
+        this.scrollToCurrent(type, 'start');
+      }
     }
   }
-  
+
+
   // --- 上下半ステップ移動 ---
   private moveHalfNextPair(type: '_' | '│') {
     const currentRange = type === '_' ? this.underscoreRange : this.boxRange;
@@ -548,18 +603,61 @@ export class UnderscoreNavigator {
     if (!range) return;
 
     const { nodeMaps } = this.buildTextContext();
-    let startPos
+    let targetPos: Position | null = null;
+
+    // ▼【変更1】point の値に応じて、開始位置か終了位置かを切り替える分岐を復活
     if (point === 'start') {
-      startPos = this.resolvePosition(range.start, nodeMaps);
+      targetPos = this.resolvePosition(range.start, nodeMaps);
     } else {
-      startPos = this.resolvePosition(range.end, nodeMaps);
+      targetPos = this.resolvePosition(range.end, nodeMaps);
     }
 
-    if (startPos && startPos.node.parentElement) {
-      startPos.node.parentElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
+    if (targetPos) {
+      // ▼【変更2】取得した targetPos から1文字分のRangeを作って座標を取得する
+      const domRange = new Range();
+      try {
+        domRange.setStart(targetPos.node, targetPos.offset);
+        domRange.setEnd(
+          targetPos.node, 
+          Math.min(targetPos.offset + 1, (targetPos.node.textContent || '').length)
+        );
+
+        const rect = domRange.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return; // 描画されていない場合など
+
+        // 画面上部からの目標位置（例：15%の位置）
+        const targetTop = window.innerHeight * 0.15;
+        const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // 現在の要素のビューポート上の絶対位置から、目標位置との差分を計算
+        const absoluteTargetY = rect.top + currentScrollY - targetTop;
+
+        window.scrollTo({
+          top: absoluteTargetY,
+          behavior: 'smooth'
+        });
+      } catch (e) {
+        console.error('Scroll calculation error:', e);
+      }
     }
   }
+  // private scrollToCurrent(type: '_' | '│', point: string) {
+  //   const range = type === '_' ? this.underscoreRange : this.boxRange;
+  //   if (!range) return;
+
+  //   const { nodeMaps } = this.buildTextContext();
+  //   let startPos
+  //   if (point === 'start') {
+  //     startPos = this.resolvePosition(range.start, nodeMaps);
+  //   } else {
+  //     startPos = this.resolvePosition(range.end, nodeMaps);
+  //   }
+
+  //   if (startPos && startPos.node.parentElement) {
+  //     startPos.node.parentElement.scrollIntoView({
+  //       behavior: 'smooth',
+  //       block: 'center'
+  //     });
+  //   }
+  // }
 }
