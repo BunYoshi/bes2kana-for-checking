@@ -362,5 +362,6 @@ export function formatText(unicode: string, mode: OutputMode): string {
       .join('@LB@')
       .replace(/@LB@@PB@/g, '@PB@')
       .replace(/@PB@@LB@/g, '@PB@')
+      .replace(/(@PB@)+/g, '@PB@')
       .replace(/(@LB@)+$/, '')
 }
