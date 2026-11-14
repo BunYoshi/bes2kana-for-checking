@@ -159,7 +159,7 @@ export function formatText(unicode: string, mode: OutputMode): string {
   // 後半の処理
   // ----------------------------------------------------
   const prefix = !startsWith28Num && startIndex === 0 ? '' : '@PB@'
-  const targetText = `${prefix}${normalizedText.slice(startIndex)}`
+  const targetText = normalizedText.slice(startIndex)
   const lines = targetText.split(/@LB@/)
   if (lines.length === 0) return ''
 
@@ -187,6 +187,9 @@ export function formatText(unicode: string, mode: OutputMode): string {
 
     // ページ１行目（ページ番号行）はスキップ
     if (line.includes('@PB@') || line.includes('@HR@')) {
+      if (i === 0) {
+        result.push(prefix)
+      }
       continue
     }
 
@@ -323,7 +326,6 @@ export function formatText(unicode: string, mode: OutputMode): string {
     }
   }
   
-    console.log();
     const finalized: string[] = []
     // const kanaMode: OutputMode = "katakana"
     for (let i = 0; i < result.length; i++) {
@@ -359,5 +361,6 @@ export function formatText(unicode: string, mode: OutputMode): string {
     return finalized
       .join('@LB@')
       .replace(/@LB@@PB@/g, '@PB@')
+      .replace(/@PB@@LB@/g, '@PB@')
       .replace(/(@LB@)+$/, '')
 }
