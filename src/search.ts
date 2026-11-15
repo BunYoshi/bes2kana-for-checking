@@ -346,16 +346,19 @@ export class UnderscoreNavigator {
       for (let i = currentRange.start - 1; i >= 0; i--) {
         if (fullText[i] === '│') {
           markerEnd = i
+          break
         }
       }
       if (markerEnd) {
         for (let i = markerEnd - 1; i >= 0; i--) {
-          if (fullText[i - 1] !== '│') {
-            markerStart = i
-          } else {
-            markerStart = i - 1
+          if (fullText[i] === '│') {
+            if (fullText[i - 1] !== '│') {
+              markerStart = i
+            } else {
+              markerStart = i - 1
+            }
+            break
           }
-          break;
         }
       }
       if (markerStart && markerEnd) {
