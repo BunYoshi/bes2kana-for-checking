@@ -212,15 +212,6 @@ export function formatText(unicode: string, mode: OutputMode): string {
         const preText = '\u2800'.repeat(spaceCount) + '┗' + trimedText.slice(1, -1) + '┛'
         waku = preText.replace(/⠒/g, '━')
       }
-    //   if (/^[\u2816\u2836]/.test(trimedText)) {
-    //     inBlockCount++
-    //   } else if (/^[\u2813\u281b]/.test(trimedText)) {
-    //     inBlockCount--
-    //   }
-    //   if (result[result.length - 1] !== '') result.push('')
-    //   if (framedTitleRegex.test(line)) {
-    //     result.push(extractFramedTitle(line))
-    //   }
       result.push(waku)
       continue
     }
@@ -355,9 +346,6 @@ export function formatText(unicode: string, mode: OutputMode): string {
         finalized.push(unicode2kana(converted, { mode: mode }))
     }
 
-    // const finalized = result.map(line => {
-    //     unicode2kana(line, { mode: "katakana" })
-    // })
     return finalized
       .join('@LB@')
       .replace(/@LB@@PB@/g, '@PB@')

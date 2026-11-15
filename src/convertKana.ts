@@ -28,7 +28,6 @@ export function convertKana(text: string): string {
     .replace(/⠰⠤/g, '『')
     .replace(/⠤⠆/g, '』')
     .replace(/⠐⠶(.*?)⠶⠂/gu, '｛$1｝')
-    .replace(/⠐⠶(.*?)⠶⠂/gu, '｛$1｝')
     .replace(/⠰⠶/g, '((')
     .replace(/⠶⠆/g, '))')
     .replace(/⠠⠄/g, '=')
