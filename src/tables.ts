@@ -205,22 +205,13 @@ export const hatsuonTable: Record<string, string> = {
     '⠓⠺': 'hw'
 }
 
-export const waku1Table: Record<string, string> = {
+export const wakuTable: Record<string, string> = {
     '⠒': '─',
     '⠖': '┌',
     '⠲': '┐',
     '⠓': '└',
     '⠚': '┘'
 }
-
-export const waku2Table: Record<string, string> = {
-    '⠒': '━',
-    '⠫': '┏',
-    '⠝': '┓',
-    '⠮': '┗',
-    '⠵': '┛'
-}
-
 
 export const nonBraille = "[^\\u2800-\\u28ff]"
 export const tenjiAlphabets = "[⠁⠃⠉⠙⠑⠋⠛⠓⠊⠚⠅⠇⠍⠝⠕⠏⠟⠗⠎⠞⠥⠧⠺⠭⠽⠵]"

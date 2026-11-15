@@ -2,7 +2,7 @@ import type { OutputMode } from "./types"
 import { unicode2kana } from "./unicode2kana"
 import { Score } from "./types"
 import { getEnglishRangeIndex } from "./convertEnglish"
-import { waku1Table, waku2Table } from "./tables"
+import { wakuTable } from "./tables"
 import { resolveModuleName } from "typescript"
 
 export function formatText(unicode: string, mode: OutputMode): string {
@@ -201,7 +201,7 @@ export function formatText(unicode: string, mode: OutputMode): string {
         let waku = ''
       if (trimedText.startsWith('⠖') || trimedText.startsWith('⠓')) {
         for (const char of line) {
-          waku += waku1Table[char] ?? char
+          waku += wakuTable[char] ?? char
         }
       }
       if (trimedText.startsWith('⠶')) {
