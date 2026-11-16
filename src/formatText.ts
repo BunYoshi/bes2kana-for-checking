@@ -43,7 +43,10 @@ export function formatText(unicode: string, mode: OutputMode): string {
   let isTocPage = false
   let isStart = true
   let isEnd = true
+  let endSpace = 0
+  let prevSpace = 0
   let mostFrequentIndex: number | null = null
+  const tocRegex = /([^\u2800]+)(?=\u2800|$)/u
 
   // ----------------------------------------------------
   // 前半（表紙・目次ページ）の処理
@@ -123,6 +126,7 @@ export function formatText(unicode: string, mode: OutputMode): string {
 
       // 文字列の末尾が完結しているか判定
       if (isTocPage) {
+        prevSpace = endSpace
         if (line === '') {
           isStart = true
           isEnd = true
@@ -134,19 +138,36 @@ export function formatText(unicode: string, mode: OutputMode): string {
             .replace(/\u2800{2,3}\u283c$/u, '\u2800…\u2800\u283c')
           line = replacedFirstPart + secondPart
           isEnd = true
+          endSpace = 0
         } else if (/\u2836\u2836\u281d\u2810\u281d\u2823\u2836\u2836/u.test(line)) {
           isEnd = true
         } else {
           isEnd = false
+          if (mostFrequentIndex) endSpace = mostFrequentIndex - line.length
         }
 
         // 文字列の先頭の状態に応じて出力し、末尾の状態に応じて次行の先頭の状態を設定
         if (isStart) {
           if (!isEnd) isStart = false
         } else {
+          const topWord = line.match(tocRegex)
+          if (topWord
+            && (
+              (topWord[0] !== '…' && prevSpace > topWord[0].length)
+              || (topWord[0] === '…' && prevSpace > 4)
+            )
+          ) {
+                console.log(prevSpace);
+                console.log(topWord[0]);
+                
+            line = line.replace(tocRegex, '注始$1注終')
+          }
           line = line.replace(/^\u2800+/, '\u2800')
           result[result.length - 1] = result[result.length - 1] + line
-          if (isEnd) isStart = true
+          if (isEnd) {
+            isStart = true
+            endSpace = 0
+          }
           continue
         }
       }

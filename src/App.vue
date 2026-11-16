@@ -238,4 +238,8 @@ const updateDisplay = async () => {
 .braille-viewer-area:focus {
   outline: none;
 }
+.toc-annotation {
+  background-color: #d63384;
+  color: #fff0f5;
+}
 </style>

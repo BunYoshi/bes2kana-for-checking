@@ -11,7 +11,7 @@
           <template v-for="(line,lno) in page" :key="lno">
             <hr v-if="line === '@HR@'">
             <p v-else-if="line.length === 0"><br /></p>
-            <p v-else>{{ tenji2kana(line) }}</p>
+            <p v-else v-html="tenji2kana(line)"></p>
           </template>
         </div>
       </section>

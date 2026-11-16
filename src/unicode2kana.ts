@@ -5,6 +5,7 @@ import { convertEnglish } from './convertEnglish'
 import { convertAlphabets } from './convertAlphabets'
 import { convertNumbers } from './convertNumbers'
 import { convertKana } from './convertKana'
+import { tocAnnotations } from './tocAnnotations'
 import { switchMode } from './switchMode'
 
 export function unicode2kana(brailleText: string, options: Types.EngineOptions): string {
@@ -14,7 +15,8 @@ export function unicode2kana(brailleText: string, options: Types.EngineOptions):
   result = convertEnglish(result)
   result = convertAlphabets(result)
   result = convertNumbers(result)
-  result = convertKana(result)  
+  result = convertKana(result)
+  result = tocAnnotations(result)
   result = switchMode(result, options.mode)
 
   return result
