@@ -2,13 +2,18 @@ import * as Tables from './tables'
 
   // 数字の変換
   export function convertNumbers(text: string) {
-    const numberNumberRegex = new RegExp(`(⠼${Tables.numbers}+)(⠼${Tables.numbers}+)`, "gu")
+    const numberNumberRegex = new RegExp(`(?:⠼${Tables.numbers}+){2,}`, "gu")
     const numberRegex = new RegExp(`⠼(?:${Tables.downNumbers}|[⠄])*(?:${Tables.numbers}+(?:[⠄⠂⠒]${Tables.numbers}+)*)?`, "gu")
     const downNumberRegex = new RegExp(`^${Tables.downNumbers}+`, "gu")
     Tables.numberTable['⠂'] = '.'
     Tables.numberTable['⠒'] = ':'
 
-    const str = text.replace(numberNumberRegex, "$1、$2")
+    const str = text
+      .replace(numberNumberRegex, (match) => {
+        const unitRegex = new RegExp(`⠼${Tables.numbers}+`, "gu")
+        const found = match.match(unitRegex)
+        return found ? found.join('、') : match
+      })
     return str.replace(numberRegex, (match) => {
       const content = match.slice(1)
       // 下がり数字を漢数字に変換
