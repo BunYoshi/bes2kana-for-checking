@@ -3,15 +3,15 @@ import { unicode2kana } from "./unicode2kana"
 import { Score } from "./types"
 import { getEnglishRangeIndex } from "./convertEnglish"
 import { wakuTable } from "./tables"
-import { resolveModuleName } from "typescript"
 
 export function formatText(unicode: string, mode: OutputMode): string {
   if (!unicode) return ''
 
   // ユニコードの整理
-  const normalizedText = unicode
-    .replace(/@LB@.@PB@/gu, '@LB@@PB@') // 改ページ記号を整理
-    .replace(/@LB@@HR@@LB@@LB@/g, '@LB@') // 見出しタグを削除
+  const normalizedText = ('@PE@\u2800' + unicode)
+    .replace(/@LB@@IN@[^@]@LE@/gu, '@LB@@LE@@PB@@LE@@PE@') // インデント前後に仕切り線
+    .replace(/@IN@/gu, '') // インデント記号を削除
+    .replace(/@LB@.@PE@/gu, '@LB@@PE@') // 改ページ記号を整理
 
   // ----------------------------------------------------
   // 表紙・目次ページの終わりを判定
@@ -19,11 +19,11 @@ export function formatText(unicode: string, mode: OutputMode): string {
   let startIndex = 0
 
   // 判定条件1: 先頭行が28マス目の数符⠼（\u283c）から始まっているか
-  const startsWith28Num = /^\u2800{25,}\u283c/.test(normalizedText)
+  const startsWith28Num = /^@PE@(?=(?=.{0,12}\u2800{15,}).{27}\u283c)/.test(normalizedText)
 
   if (!startsWith28Num) {
     // 判定条件2: 「@PB@ → スペース複数 → 数符⠼（\u283c）」の並びが現れる最初の位置を探す
-    const match = normalizedText.match(/@PB@\u2800+\u283c/)
+    const match = normalizedText.match(/@PE@(?=(?=.{0,12}\u2800{15,}).{27}\u283c)/)
     if (match && match.index !== undefined) {
       startIndex = match.index
     }
@@ -35,7 +35,15 @@ export function formatText(unicode: string, mode: OutputMode): string {
   const result: string[] = []
 
   // 前半部分（startIndexより前）をそのままpush
-  const beforeText = normalizedText.slice(0, startIndex)
+  let beforeText = normalizedText.slice(0, startIndex)
+    .replace(/@LE@(?:.|.{4})@PE@/gu, '@LE@@PE@')
+    .replace(/(?<=@PE@)\u2800{27}(.*?)@LE@/gu, '')
+    .replace(/@PE@@LE@/gu, '')
+    .replace(/(?<!(\u2800|@LB@))@LE@(?![\u2800@])/gu, '行移し')
+    .replace(/@PE@/gu, '')
+    .replace(/@LE@/gu, '')
+    .replace(/@PB@/gu, '@LB@@PB@')
+
   let pageFrameCount = 0
   let titleFrameCount = 0
   let indexOfTitleLine = 0
@@ -52,18 +60,15 @@ export function formatText(unicode: string, mode: OutputMode): string {
   // 前半（表紙・目次ページ）の処理
   // ----------------------------------------------------
   if (beforeText) {
+    let currentParagraphIndent = -1
     const lines = beforeText.split(/@LB@/)
     if (lines.length === 0) return ''
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i]
 
       // 1ページ目の終了を検出
-      if (line.includes('@PB@')) {
-        if (isFirstPage) {
-          result.push('@PB@')
-          isFirstPage = false
-        }
-        continue
+      if (isFirstPage && line.includes('@PB@')) {
+        isFirstPage = false
       }
 
       // 1ページ目のみに適用
@@ -80,7 +85,17 @@ export function formatText(unicode: string, mode: OutputMode): string {
             .slice(1, -1).join('')
         }
 
+        // ２マス下げは前行に続ける
+        const spaceMatch = line.match(/^(\u2800+)/)
+        const spaceCount = spaceMatch ? spaceMatch[1].length : 0
         line = line.replace(/^(\u2800)+|(\u2800)+$/g, '')
+
+        if (spaceCount === currentParagraphIndent + 2) {
+          result[result.length - 1] = result[result.length - 1] + '\u2800' + line
+          continue
+        } else {
+          currentParagraphIndent = line === '' ? -1 : spaceCount
+        }
 
         // タイトル枠の始まりと終わりを判別
         if(titleFrameCount < 2 && /([^\u2800])\1{10,}/u.test(line)) {
@@ -101,53 +116,81 @@ export function formatText(unicode: string, mode: OutputMode): string {
         }
       }
 
-      // 目次ページ開始から前半終わりまで
-      if (!isTocPage && line.includes('\u283e\u2829\u2810\u2833')) {
-        result.push(line)
-        isTocPage = true
-        const indices: number[] = []
+      // 目次ページ・ページ番号位置検出
+      if (!isFirstPage && !isTocPage) {
+        let indices: number[] = []
         for (let j = i; j < lines.length; j++) {
+          if (line.includes('@PB@')) {
+            if (indices) {
+              const countMap = new Map<number, number>()
+              for (const index of indices) {
+                countMap.set(index, (countMap.get(index) || 0) + 1)
+              }
+              let maxCount = 0
+              for (const [index, count] of countMap.entries()) {
+                if (count > maxCount) {
+                  maxCount = count
+                  mostFrequentIndex = index
+                }
+              }
+              if (mostFrequentIndex && mostFrequentIndex > 20) {
+                isTocPage = true
+                currentParagraphIndent = -1
+                continue
+              } else {
+                indices = []
+              }
+            } else {
+              i = j
+            }
+          }
           let index = lines[j].replace(/\u2836\u283c/g, '\u2836\u2836').lastIndexOf('\u283c')
           if (index !== -1) indices.push(index)
         }
-        const countMap = new Map<number, number>()
-        for (const index of indices) {
-          countMap.set(index, (countMap.get(index) || 0) + 1)
-        }
-        let maxCount = 0
-        for (const [index, count] of countMap.entries()) {
-          if (count > maxCount) {
-            maxCount = count
-            mostFrequentIndex = index
-          }
-        }
-        continue
       }
 
-      // 文字列の末尾が完結しているか判定
+      // 目次ページ
       if (isTocPage) {
+        if (line.includes('@PB@')) {
+          result.push('@PB@')
+          const firstLines = line.split(/@PB@/)
+          line = firstLines[1] ? firstLines[1] : ''
+          if (line.includes('行移し')) {
+            break
+          }
+        }
+        
+        const spaceMatch = line.match(/^(\u2800+)/)
+        const spaceCount = spaceMatch ? spaceMatch[1].length : 0
+
         prevSpace = endSpace
         if (line === '') {
           isStart = true
           isEnd = true
+          currentParagraphIndent = -1
         } else if (mostFrequentIndex !== null && line.charAt(mostFrequentIndex) === '\u283c') {
           const firstPart = line.slice(0,mostFrequentIndex + 1)
           const secondPart = line.slice(mostFrequentIndex + 1)
           const replacedFirstPart = firstPart
             .replace(/\u2800([\u2802\u2810])\1+\u2800\u283c$/u, '\u2800…\u2800\u283c')
-            .replace(/\u2800{2,3}\u283c$/u, '\u2800…\u2800\u283c')
+            .replace(/\u2800{2,4}\u283c$/u, '\u2800…\u2800\u283c')
           line = replacedFirstPart + secondPart
           isEnd = true
           endSpace = 0
+          isStart = spaceCount === currentParagraphIndent + 2 ? false : true
+          if (spaceCount > 10) isStart = false
         } else if (/\u2836\u2836\u281d\u2810\u281d\u2823\u2836\u2836/u.test(line)) {
           isEnd = true
+          isStart = spaceCount === currentParagraphIndent + 2 ? false : true
         } else {
           isEnd = false
+          isStart = spaceCount === currentParagraphIndent + 2 ? false : true
           if (mostFrequentIndex) endSpace = mostFrequentIndex - line.length
         }
 
         // 文字列の先頭の状態に応じて出力し、末尾の状態に応じて次行の先頭の状態を設定
         if (isStart) {
+          currentParagraphIndent = spaceCount
           if (!isEnd) isStart = false
         } else {
           const topWord = line.match(tocRegex)
@@ -157,9 +200,6 @@ export function formatText(unicode: string, mode: OutputMode): string {
               || (topWord[0] === '…' && prevSpace > 4)
             )
           ) {
-                console.log(prevSpace);
-                console.log(topWord[0]);
-                
             line = line.replace(tocRegex, '注始$1注終')
           }
           line = line.replace(/^\u2800+/, '\u2800')
@@ -170,51 +210,70 @@ export function formatText(unicode: string, mode: OutputMode): string {
           }
           continue
         }
+        if (isEnd) currentParagraphIndent = -1
       }
 
+      if (!isFirstPage && line.includes('@PB@')) continue
       if (line !== '') result.push(line)
+        
     }
   }
 
   // ----------------------------------------------------
   // 後半の処理
   // ----------------------------------------------------
-  const prefix = !startsWith28Num && startIndex === 0 ? '' : '@PB@'
-  const targetText = normalizedText.slice(startIndex)
+  const prefix = startIndex === 0 ? '' : '@PB@'
+  const targetText = normalizedText
+    .slice(startIndex)
+    .replace(/@LE@(?:.|.{4})@PE@/gu, '@LE@@PE@')
+    .replace(/@PB@/gu, '@PB@@LB@')
+    .replace(/@LB@@LE@/gu, '@LB@')
+    .replace(/(?<![\u2800@])@LE@(?![\u2800@])/gu, '行移し')
+    .replace(/^@PE@\u2800/, (match) => {
+      if (!startsWith28Num && startIndex === 0) {
+        return ''
+      } else {
+        return match
+      }
+    })
   const lines = targetText.split(/@LB@/)
   if (lines.length === 0) return ''
 
   let currentParagraphIndent = -1
   let indentDiff: Score = undefined
-  let inBlockCount = 0
   const Chars = "[\u2813\u2816\u2836\u281b]"
   const Zorome = "([\\u2812\\u2802\\u2810])\\1{10,}"
   const frameRegex = new RegExp(`${Chars}${Zorome}`, 'u')
   const framedTitleRegex = /^\u2800*(?:\u2816([\u2812\u2802])\1+\u2800(.+?)\u2800\1+\u2832|\u2836(\u2812)\3+\u2800(.+?)\u2800\3+\u2836)$/u
   
-  function extractFramedTitle(line: string): string {
-    return line.replace(
-      framedTitleRegex,
-      (match, char1, title1, char2, title2) => {
-        const title = title1 || title2
-        const titleIndex = line.indexOf(title)
-        return '\u2800'.repeat(titleIndex) + title
-      }
-    )
-  }
-
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i]
 
-    // ページ１行目（ページ番号行）はスキップ
-    if (line.includes('@PB@') || line.includes('@HR@')) {
+    // ページ境界・ページ番号行を含むline
+    if (line.includes('@PE@')) {
       if (i === 0) {
         result.push(prefix)
       }
+      line = line
+        .replace(/(?<=@PE@).{27}\u283c(.*?)(?:行移し|@LE@)/gu, (match) => {
+          if(/\u2800{15,}/u.test(line)) {
+            return ''
+          } else {
+            return match
+          }
+        })
+        .replace(/@LE@@PE@/gu, '')
+        .replace(/^(.*?)@PE@/gu, '')
+    }
+
+    line = line.replace(/@LE@/gu, '')
+
+    if (line === '@PB@') {
+      result.push(line)
       continue
     }
 
-    // 枠線の行は空行に
+    // 枠線の行
     if (framedTitleRegex.test(line) || frameRegex.test(line) || /([\u2812\u2802])\1{10,}/u.test(line)) {
       const trimedText = line.replace(/^(\u2800)+/g, '')
       const spaceMatch = line.match(/^(\u2800+)/)
@@ -224,16 +283,17 @@ export function formatText(unicode: string, mode: OutputMode): string {
         for (const char of line) {
           waku += wakuTable[char] ?? char
         }
-      }
-      if (trimedText.startsWith('⠶')) {
+      } else if (trimedText.startsWith('⠶')) {
         const preText = '\u2800'.repeat(spaceCount) + '┏' + trimedText.slice(1, -1) + '┓'
         waku = preText.replace(/⠒/g, '━')
-      }
-      if (trimedText.startsWith('⠛')) {
+      } else if (trimedText.startsWith('⠛')) {
         const preText = '\u2800'.repeat(spaceCount) + '┗' + trimedText.slice(1, -1) + '┛'
         waku = preText.replace(/⠒/g, '━')
+      } else {
+        waku = line
       }
       result.push(waku)
+      currentParagraphIndent = -1
       continue
     }
 
@@ -263,17 +323,15 @@ export function formatText(unicode: string, mode: OutputMode): string {
     // 結合条件1: 次の行の行頭に \u2800 がない場合（改行削除してそのまま連結）
     if (spaceCount === 0) {
       let baseLine = prevLine
-      if (prevLine.length === 0) {
-        result.pop()
-        baseLine = result[result.length - 1]
-      }
-      if (/\u2800$/.test(baseLine)) {
-        result[result.length - 1] = baseLine + line
-      } else {
+      if (
+        currentParagraphIndent === 2
+        && /^⠈/.test(line)
+        && !/\u2800$/.test(baseLine)
+      ) {
         result[result.length - 1] = baseLine + '行移し' + line
+        continue
       }
       indentDiff = undefined
-      continue
     }
 
     // 結合条件2: 前行行頭の \u2800 が4マス以上10マス未満で、次行が「+2マス」のインデントで続く場合
@@ -315,27 +373,8 @@ export function formatText(unicode: string, mode: OutputMode): string {
     indentDiff = undefined
 
     // 上記の結合条件に当てはまらない場合（新しい段落の開始など）
-    if (spaceCount >= 4) {
-      if (inBlockCount > 0) {
-        if (result[result.length - 1] !== '') {
-          result.push('@LB@' + line)
-        } else {
-          result.push(line)
-        }
-      } else if (
-        (spaceCount === 4 && line[4] === '⠶')
-        || spaceCount >= 10
-        || currentParagraphIndent >= spaceCount
-      ) {
-        result.push(line)
-      } else {
-        result.push('@PB@' + line)
-      }
-      currentParagraphIndent = spaceCount
-    } else {
-      currentParagraphIndent = -1
-      result.push(line)
-    }
+    result.push(line)
+    currentParagraphIndent = spaceCount
   }
   
     const finalized: string[] = []

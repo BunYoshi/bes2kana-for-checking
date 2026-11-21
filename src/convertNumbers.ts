@@ -3,7 +3,7 @@ import * as Tables from './tables'
   // 数字の変換
   export function convertNumbers(text: string) {
     const numberNumberRegex = new RegExp(`(?:⠼${Tables.numbers}+){2,}`, "gu")
-    const numberRegex = new RegExp(`⠼(?:${Tables.downNumbers}|[⠄])*(?:${Tables.numbers}+(?:[⠄⠂⠒]${Tables.numbers}+)*)?`, "gu")
+    const numberRegex = new RegExp(`(?:(⠼${Tables.downNumbers}+|⠼⠄|⠼))(?:${Tables.numbers}+(?:[⠄⠂⠒]${Tables.numbers}+)*)?`, "gu")
     const downNumberRegex = new RegExp(`^${Tables.downNumbers}+`, "gu")
     Tables.numberTable['⠂'] = '.'
     Tables.numberTable['⠒'] = ':'
